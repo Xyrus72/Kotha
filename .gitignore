@@ -1,0 +1,22 @@
+# Python environment (rebuild with: py -3.13 -m venv .venv && .venv\Scripts\pip install -r requirements.txt)
+.venv/
+__pycache__/
+*.pyc
+
+# AI models (several GB) - see "Getting the models" in README.md
+models/
+
+# downloads, test audio, benchmark clips
+.cache/
+
+# run logs and test results
+logs/
+
+# your own settings and recordings
+config.json
+data/
+
+# editor / tool settings
+.claude/
+.vscode/
+.idea/
