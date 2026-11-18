@@ -315,11 +315,21 @@ $('voice').onclick = () => {
   showVoice();
 };
 showVoice();
-$('new').onclick = async () => {
+// A new chat starts like a real call: the agent greets first (spoken when the click allows audio).
+async function startCall(speakIt) {
   stopSpeaking();
-  await fetch('/api/reset', { method: 'POST' });
-  log.innerHTML = '<p class="empty" id="empty">New chat. Click the microphone and speak.</p>';
-};
+  let greeting = '';
+  try { greeting = (await (await fetch('/api/reset', { method: 'POST' })).json()).greeting || ''; } catch {}
+  if (!greeting) {
+    log.innerHTML = '<p class="empty" id="empty">New chat. Click the microphone and speak.</p>';
+    return;
+  }
+  log.innerHTML = '';
+  const el = add('bot', greeting);
+  if (speakIt) speak(greeting, 'bn', el);
+}
+$('new').onclick = () => startCall(true);
+startCall(false);
 refreshStatus();
 </script>
 </body>

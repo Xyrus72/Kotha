@@ -164,8 +164,66 @@ class Speaker:
             samples = np.interp(np.linspace(0, len(samples) - 1, n), np.arange(len(samples)), samples)
         return samples.astype(np.float32)
 
+    # -- expressive voice (OmniVoice service, tts_service.py) -------------------------------------------
+    _svc_ok: bool | None = None
+    _svc_checked = 0.0
+
+    def _service_up(self) -> bool:
+        """True when the OmniVoice service answers /health as ready (re-checked at most every 20 s)."""
+        import time
+        import urllib.request
+        if self.cfg.get("tts_engine", "auto") == "sherpa":
+            return False
+        if self._svc_ok is not None and time.monotonic() - self._svc_checked < 20:
+            return self._svc_ok
+        self._svc_checked = time.monotonic()
+        try:
+            with urllib.request.urlopen(f"{self.cfg.get('tts_service', 'http://127.0.0.1:8766')}/health",
+                                        timeout=0.5) as r:
+                import json
+                self._svc_ok = bool(json.load(r).get("ready"))
+        except OSError:
+            self._svc_ok = False
+        return self._svc_ok
+
+    def _service_synth(self, text: str, language: str | None) -> np.ndarray | None:
+        import io
+        import json
+        import urllib.request
+        import soundfile as sf
+        from .bn_numbers import spell_numbers
+        text = clean_for_speech(text)
+        if not re.search(r"[^\W_]", text):
+            return np.zeros(0, dtype=np.float32)
+        main = language if language in ("en", "bn") else detect_language(text)
+        if main == "bn":
+            text = re.sub(r"\(\s*[A-Za-z][^)ঀ-৿]*\)", " ", text)
+            text = spell_numbers(text)
+        text = " ".join(re.sub(r"[()\[\]{}\"]", " ", text).split())
+        speed = float(self.cfg.get("tts_bangla_speed" if main == "bn" else "tts_english_speed", 1.0))
+        req = urllib.request.Request(f"{self.cfg.get('tts_service', 'http://127.0.0.1:8766')}/speak",
+                                     data=json.dumps({"text": text, "speed": speed}).encode("utf8"),
+                                     headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                samples, rate = sf.read(io.BytesIO(r.read()), dtype="float32")
+        except OSError:
+            self._svc_ok = False                        # fall back to the CPU voices until it is healthy again
+            return None
+        if rate != self.RATE:
+            n = int(round(len(samples) * self.RATE / rate))
+            samples = np.interp(np.linspace(0, len(samples) - 1, n), np.arange(len(samples)), samples)
+        return samples.astype(np.float32)
+
+    def engine(self) -> str:
+        return "omnivoice" if self._service_up() else "sherpa"
+
     def synth(self, text: str, language: str | None = None) -> tuple[np.ndarray, int]:
         """-> (float32 samples, sample rate). Empty array when there is nothing to say."""
+        if self._service_up():
+            samples = self._service_synth(text, language)
+            if samples is not None:
+                return samples, self.RATE
         self.ready.wait()
         if self.error:
             raise RuntimeError(self.error)

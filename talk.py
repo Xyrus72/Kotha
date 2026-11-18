@@ -106,7 +106,7 @@ def main() -> int:
     chat = None
     if not args.no_llm:
         from voice.llm import Chat
-        chat = Chat(cfg["llm_model"], host=cfg["ollama_host"], num_ctx=cfg["llm_context"], think=cfg["llm_think"])
+        chat = Chat.from_config(cfg)
         problem = chat.available()
         if problem:
             print(f"(no replies: {problem})")

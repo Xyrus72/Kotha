@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parent
 cfg = config.load()
 stt = Transcriber(cfg)
 speaker = Speaker(cfg)
-chat = Chat(cfg["llm_model"], host=cfg["ollama_host"], num_ctx=cfg["llm_context"], think=cfg["llm_think"])
+chat = Chat.from_config(cfg)
 app = FastAPI(title="Voice Chat")
 
 # All GPU speech work happens on one long-lived thread: CTranslate2's CUDA handles are per-thread, and a
@@ -154,8 +154,13 @@ def api_chat(body: ChatIn):
 
 @app.post("/api/reset")
 def api_reset():
-    chat.reset()
-    return JSONResponse({"ok": True})
+    """New chat. In customer-care mode the agent opens the call with its greeting, like a real agent."""
+    greeting = cfg.get("greeting", "") if cfg.get("mode", "care") == "care" else ""
+    if greeting:
+        chat.greet(greeting)
+    else:
+        chat.reset()
+    return JSONResponse({"ok": True, "greeting": greeting})
 
 
 def _warm_llm() -> None:

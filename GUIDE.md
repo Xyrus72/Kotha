@@ -52,6 +52,30 @@ recording is written down again in the other language, the wrong reply disappear
 If you choose **English** or **বাংলা** in the top bar instead of Auto, this step is skipped and that language is
 always used — that is the most reliable choice when you know what you will speak.
 
+### Customer-care mode (the default)
+
+The AI plays **Mitu, a customer-care agent** for a company. Everything she knows about the company is in
+**`business/profile.md`**: products, delivery charges and times, returns, refunds, warranty, offers, and what she
+may and may not promise. The shipped profile is a *fictional* shop (Nirvana Gadgets) — **replace it with your
+real business** and restart the app. Change her name, the company name and the greeting in `config.json`:
+
+```json
+{ "agent_name": "Rina", "company_name": "My Shop", "greeting": "আসসালামু আলাইকুম, মাই শপ থেকে রিনা বলছি।" }
+```
+
+How she is told to behave is in `voice/prompts.py`: talk like a person on the phone (one or two short sentences,
+one question at a time), natural Bangladeshi Bangla instead of textbook Bangla, acknowledge feelings only when
+the caller is upset, use the rules in the caller's favour, never invent stock or order status (she notes it for
+the team, who call back within 24 hours), never end on a bare "no", and offer a senior colleague's call-back to
+angry callers. Set `"mode": "assistant"` in `config.json` for the old general-purpose helper.
+
+How it was measured: 24 realistic calls (`business/scenarios.json`, 12 English + 12 Bangla: late delivery,
+wrong item, angry repeat caller, discount pushing, unknown stock…) were scored by independent reviewers on
+human-likeness, empathy, brevity, correctness and language. From the old setup to the final one: Bangla
+human-likeness 1.5 → 3.6 out of 5, correctness 1.3 → 4.0; English human-likeness 1.9 → 3.6, correctness
+1.6 → 4.5. Replies now start in about 0.2 s (thinking is switched off; it used to add 6–14 s of silence).
+Re-run with `tools\care_eval.py <name>` after you change the profile or the prompt.
+
 ### Step 3 — The AI reply (LLM)
 
 | What | Details |

@@ -1,5 +1,9 @@
 # Python environment (rebuild with: py -3.13 -m venv .venv && .venv\Scripts\pip install -r requirements.txt)
 .venv/
+.venv-tts/
+
+# generated voice reference clips (made on first start of tts_service.py)
+voices/
 __pycache__/
 *.pyc
 
